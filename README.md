@@ -9,13 +9,13 @@ Two observational datasets are used as input:
 
 **Repository content**
 - **Codes**
-  data_preparation_obs.ipynb: HadISST SST and NCEP NCAR SLP data are prepared for use as CNN inputs.
-  cnn_train.py: training and validation of the CNN for each lead time. The code is parallelized for each lead time due to the large size of the data.
-  cnn_test.ipynb: testing of the CNN for each lead time and evaluation of the performance metrics for training, validation and testing.
-  results_plots.ipynb: plots the obtained results and compares them with SON observations of the DI.
+  - data_preparation_obs.ipynb: HadISST SST and NCEP NCAR SLP data are prepared for use as CNN inputs.
+  - cnn_train.py: training and validation of the CNN for each lead time. The code is parallelized for each lead time due to the large size of the data.
+  - cnn_test.ipynb: testing of the CNN for each lead time and evaluation of the performance metrics for training, validation and testing.
+  - results_plots.ipynb: plots the obtained results and compares them with SON observations of the DI.
 - **Output figures**
-  acc_son_di_obs_cnn_lead_time.pdf:  plot of the Anomaly Correlation Coefficient (ACC) computed between the observed HadISST SON Dipole Index and the CNN ensemble prediction, as a function of lead time.
-  son_di_hadisst_testing.pdf: plot of the SON Dipole Index (DI) from HadISST observations (solid curve) and CNN ensemble predictions at all lead times (dashed curves) over the testing period.
+  - acc_son_di_obs_cnn_lead_time.pdf:  plot of the Anomaly Correlation Coefficient (ACC) computed between the observed HadISST SON Dipole Index and the CNN ensemble prediction, as a function of lead time.
+  - son_di_hadisst_testing.pdf: plot of the SON Dipole Index (DI) from HadISST observations (solid curve) and CNN ensemble predictions at all lead times (dashed curves) over the testing period.
 
 The files should be run in the following order
 1) data_preparation_obs.ipynb
