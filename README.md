@@ -17,6 +17,7 @@ Two observational datasets are used as input:
 - **Output figures**
   - acc_son_di_obs_cnn_lead_time.pdf:  plot of the Anomaly Correlation Coefficient (ACC) computed between the observed HadISST SON Dipole Index and the CNN ensemble prediction, as a function of lead time.
   - son_di_hadisst_testing.pdf: plot of the SON Dipole Index (DI) from HadISST observations (solid curve) and CNN ensemble predictions at all lead times (dashed curves) over the testing period.
+  - train_val_loss.pdf: plot of the training and validation loss for the top 10 models at lead time of 1 month.
 
 The files should be run in the following order
 1) data_preparation_obs.ipynb
