@@ -3,6 +3,7 @@
 This repository contains the codes for the training, validation and testing of a Convolutional Neural Network (CNN) - based prediction of the September-November (SON) Dipole Index (DI). The architecture is based on Tao (2024) work. DOI: 10.1088/1748-9326/ad7522
 
 **Data**
+
 Two observational datasets are used as input:
 - HadISST Sea Surface Temperature (SST), downloaded from https://www.metoffice.gov.uk/hadobs/hadisst/data/download.html
 - NCEP NCAR Sea Level Pressure (SLP), downloaded from https://psl.noaa.gov/data/gridded/data.ncep.reanalysis.html
