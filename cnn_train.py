@@ -1,4 +1,8 @@
-#Import the libraries
+# This code implements a Convolutional Neural Network (CNN) to predict the September-November (SON) Dipole Index (DI) using SST and SLP anomalies over the Indian and Pacific Oceans as input, following the architecture proposed by Tao (2024) DOI 10.1088/1748-9326/ad7522.
+# The grid search is parallelized, with one process for each lead time (6 total).
+# For each lead time, the top 10 models (with the lowest validation loss) are saved.
+
+# Import the libraries
 import numpy as np
 import xarray as xr
 import tensorflow as tf
@@ -11,8 +15,6 @@ import json
 import logging
 import multiprocessing as mp
 from datetime import datetime
-
-# Implement a Convolutional Neural Network (CNN) to predict the Dipole Index during September-November (SON), by using the architecture proposed by Tao (2024) DOI 10.1088/1748-9326/ad7522
 
 # Define the months for the CNN input; define the number of lead time
 months_name = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG']
@@ -28,10 +30,12 @@ grid_search_params = {
     'learning_rate': [0.1, 0.01, 0.001]
 }
 # Generate all the possible combinations for the hyperparameters (864)
+# Each combination defines a unique CNN architecture and training setup
 param_grid = list(ParameterGrid(grid_search_params))
 
 
 # Logging pre-process
+# Set up a logger for each lead time: writes to both a log file and the console
 def get_logger(lead_time):
     os.makedirs("logs", exist_ok=True)
     logger = logging.getLogger(f"LT_{lead_time}")
@@ -44,7 +48,7 @@ def get_logger(lead_time):
         logger.addHandler(fh); logger.addHandler(sh)
     return logger
 
-# Checkpoint
+# Checkpoint to save progress every 10 combinations so that training can be resumed in case of interruption, without restarting from scratch
 def checkpoint_path(j):
     return f"checkpoints/leadtime_{j}.json"
 
@@ -72,8 +76,11 @@ def save_checkpoint(j, params_done, top_scores, top_models_params,
     with open(checkpoint_path(j), "w") as f:
         json.dump(data, f)
 
-# Function for the training of each lead time; each lead time is parallelized
+# Trains the CNN for lead time j using a full grid search over all hyperparameter combinations. 
+# This function saves checkpoints every 10 combinations.
+# This function returns the top 10 models (weights, params, histories, scores) ranked by minimum validation loss.
 def train_lead_time(j):
+    # Force CPU-only execution to avoid GPU memory conflicts across parallel processes
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -87,6 +94,7 @@ def train_lead_time(j):
         ncep_ncar_dic = dill.load(file)
 
     # Training and validation data
+    # Build the input data: 6 channels (3 months of SST + 3 months of SLP) using 3 months before the target season for each lead time
     X_train = xr.concat([
         hadisst_dic[f'{months_name[-j]} (Indian Pacific oceans)']['standardized anomaly training'],
         hadisst_dic[f'{months_name[-j-1]} (Indian Pacific oceans)']['standardized anomaly training'],
@@ -140,7 +148,7 @@ def train_lead_time(j):
         tf.keras.backend.clear_session()
         gc.collect()
 
-        # Build model
+        # Build the model, with the architecture based on Tao (2024)
         model = models.Sequential()
 
         filters = params['initial_filters']
@@ -169,16 +177,12 @@ def train_lead_time(j):
         model.add(layers.Dense(params['dense_units'], activation='elu'))
         model.add(layers.Dense(1))
 
-        model.compile(
-            optimizer=optimizers.Adam(learning_rate=params['learning_rate']),
-            loss='mse', metrics=['mae']
-        )
+        model.compile(optimizer=optimizers.Adam(learning_rate=params['learning_rate']),
+                        loss='mse', metrics=['mae'])
 
-        lr_scheduler = callbacks.ReduceLROnPlateau(
-            monitor='val_loss', factor=0.5, patience=10, verbose=0)
-        early_stop = callbacks.EarlyStopping(
-            patience=100, restore_best_weights=True)
-
+        lr_scheduler = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=0) # ReduceLROnPlateau: reduces the learning rate by a factor 0.5 if the validation loss does not improve for 10 epochs
+        early_stop = callbacks.EarlyStopping(patience=100, restore_best_weights=True) 
+        # EarlyStopping is used to restore the weights corresponding to the best validation loss (the minimum), since epochs=100 equals the maximum allowed.
         try:
             history = model.fit(
                 X_train_tensor, y_train_np,
@@ -188,7 +192,7 @@ def train_lead_time(j):
                 callbacks=[lr_scheduler, early_stop],
                 verbose=0
             )
-        except tf.errors.ResourceExhaustedError:
+        except tf.errors.ResourceExhaustedError: # If the model exceeds available memory (Out Of Memory), skip the combination and save a checkpoint to allow resuming
             oom_count += 1
             log.warning(f"OOM skipped #{oom_count}: {params}")
             del model
@@ -199,15 +203,17 @@ def train_lead_time(j):
                             top_histories, top_models_weights)
             continue
 
+        # The models are chosen based on the minimum validation loss
         val_loss = min(history.history['val_loss'])
         log.info(f"val_loss={val_loss:.6f}")
 
-        if len(top_scores) < 10:
+        # Ensemble of top 10 models
+        if len(top_scores) < 10: #The first 10 models are added directly to the list
             top_models_weights.append(model.get_weights())
             top_models_params.append(params)
             top_scores.append(val_loss)
             top_histories.append(history.history)
-        else:
+        else: # As the number of models increases, replace the worst model if the current one is better.
             idx = np.argmax(top_scores)
             if val_loss < top_scores[idx]:
                 top_models_weights[idx] = model.get_weights()
@@ -220,7 +226,7 @@ def train_lead_time(j):
         gc.collect()
 
         params_done = i + 1
-        if params_done % 10 == 0:
+        if params_done % 10 == 0: # Save checkpoint every 10 combinations to limit data loss in case of crash
             save_checkpoint(j, params_done, top_scores, top_models_params, top_histories, top_models_weights)
             log.info(f"Saved checkpoint ({params_done}/{len(param_grid)})")
 
@@ -264,6 +270,7 @@ if __name__ == "__main__":
         }
 
     log.info("Saving the final results in results_per_leadtime.pkl...")
+
     # Create file pickle
     with open("results_per_leadtime.pkl", "wb") as f:
         dill.dump(results_per_leadtime, f)
