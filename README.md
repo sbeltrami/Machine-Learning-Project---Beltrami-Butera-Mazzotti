@@ -20,7 +20,7 @@ Two observational datasets are used as input:
   - son_di_hadisst_testing.pdf: plot of the SON Dipole Index (DI) from HadISST observations (solid curve) and CNN ensemble predictions at all lead times (dashed curves) over the testing period.
   - train_val_loss.pdf: plot of the training and validation loss for the top 10 models at lead time of 1 month.
 
-The files should be run in the following order
+The files should be run in the following order:
 1) data_preparation_obs.ipynb
 2) cnn_train.py
 3) cnn_test.ipynb
