@@ -13,7 +13,7 @@ Two observational datasets are used as input:
   - data_preparation_obs.ipynb: HadISST SST and NCEP NCAR SLP data are prepared for use as CNN inputs.
   - cnn_train.py: training and validation of the CNN for each lead time. The code is parallelized for each lead time due to the large size of the data.
   - cnn_test.ipynb: testing of the CNN for each lead time and evaluation of the performance metrics for training, validation and testing.
-  - cnn_test_no_spike.ipynb: same as cnn_test.ipynb but the best models and the no-spike models are evaluated separately.
+  - cnn_test_no_spike.ipynb: same as cnn_test.ipynb but the best models and the no spike models are evaluated separately.
   - results_plots.ipynb: plots the obtained results and compares them with SON observations of the DI.
 - **Output figures**
   - acc_son_di_obs_cnn_lead_time.pdf:  plot of the Anomaly Correlation Coefficient (ACC) computed between the observed HadISST SON Dipole Index and the CNN ensemble prediction, as a function of lead time.
